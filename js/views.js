@@ -148,9 +148,16 @@
     const sum = el('div', 'detail-summary');
     const d = el('div', 'detail-summary__dates');
     d.textContent = fmtCN(trip.departureDate) + ' → ' + fmtCN(trip.returnDate);
+    const info = el('div', 'detail-summary__info');
+    const bits = [];
+    if (trip.travelers && trip.travelers.length) bits.push(trip.travelers.join('、'));
+    const dn = daysNights(trip);
+    if (dn) bits.push(dn);
+    if (bits.length) info.textContent = bits.join(' · ');
     const tot = el('div', 'detail-summary__total');
     tot.innerHTML = money(computeTotal(trip)) + ' <small>合计</small>';
     sum.appendChild(d);
+    if (bits.length) sum.appendChild(info);
     sum.appendChild(tot);
     container.appendChild(sum);
 

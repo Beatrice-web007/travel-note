@@ -113,9 +113,10 @@
     const chosen = allTrips.filter((t) => selection.has(t.id));
     if (!chosen.length) { AppUI.toast('请先选择要导出的旅行'); return; }
     const text = chosen.map(buildTripText).join('\n\n');
+    const fileText = '﻿' + text; // 加 UTF-8 BOM，避免部分系统查看器直接打开乱码
     const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const filename = '旅途记文字_' + stamp + '.txt';
-    const file = new File([text], filename, { type: 'text/plain;charset=utf-8' });
+    const file = new File([fileText], filename, { type: 'text/plain;charset=utf-8' });
 
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
       (navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
@@ -125,15 +126,15 @@
         navigator.share({ files: [file], title: '旅途记文字记录', text: text })
           .catch((err) => {
             if (err && err.name === 'AbortError') return; // 用户取消分享，不处理
-            AppUI.download(filename, text, 'text/plain;charset=utf-8');
+            AppUI.download(filename, fileText, 'text/plain;charset=utf-8');
             AppUI.toast('已导出 txt');
           });
       } catch (e) {
-        AppUI.download(filename, text, 'text/plain;charset=utf-8');
+        AppUI.download(filename, fileText, 'text/plain;charset=utf-8');
         AppUI.toast('已导出 txt');
       }
     } else {
-      AppUI.download(filename, text, 'text/plain;charset=utf-8');
+      AppUI.download(filename, fileText, 'text/plain;charset=utf-8');
       AppUI.toast('已导出 txt');
     }
   }

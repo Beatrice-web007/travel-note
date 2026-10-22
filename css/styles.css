@@ -540,30 +540,10 @@ body::before {
 
 /* ============ 列表卡片信息行（出行人 · 几天几晚） ============ */
 .trip-card__info { margin-top: 8px; font-size: 13px; color: var(--ink-2); }
+.detail-summary__info { margin-top: 4px; font-size: 14px; color: var(--ink-2); }
 
 /* ============ 表单出行人 ============ */
 .travelers-box { margin-bottom: 18px; }
-.travelers-box .field-label { margin-bottom: 6px; }
-.traveler-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-.traveler-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--paper-2);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 5px 12px;
-  font-size: 13px; color: var(--ink);
-}
-.traveler-chip__x { border: none; background: none; color: var(--ink-3); font-size: 14px; cursor: pointer; padding: 0 2px; line-height: 1; }
-.traveler-chip__x:active { color: var(--accent); }
-.traveler-input-row { display: flex; gap: 8px; }
-.traveler-input-row .input { flex: 1; }
-.traveler-add {
-  flex: none;
-  border: 1px solid var(--accent); background: transparent; color: var(--accent);
-  border-radius: 20px; padding: 8px 16px;
-  font-size: 13px; font-family: var(--sans); cursor: pointer;
-}
-.traveler-add:active { background: var(--accent-soft); }
 
 /* ============ 列表路线链（feature 1） ============ */
 .trip-card__route--chain { align-items: flex-start; }

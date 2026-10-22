@@ -14,6 +14,10 @@
     return { id: Store.newId('l'), mode: '', trainNo: '', flightNo: '', price: '', duration: '', note: '', date: '' };
   }
 
+  function parseTravelers(s) {
+    return String(s || '').split(/[、,，;；\s]+/).map((x) => x.trim()).filter(Boolean);
+  }
+
   /** 新建一趟旅行（默认：今天出发今天返回，出发点 + 终点） */
   function newTrip() {
     const today = todayStr();
@@ -187,50 +191,14 @@
     return seg;
   }
 
-  function renderTravelers(trip, rerender) {
-    const box = el('div', 'travelers-box');
-    const lab = el('span', 'field-label');
-    lab.textContent = '出行人';
-    box.appendChild(lab);
-
-    const chips = el('div', 'traveler-chips');
-    (trip.travelers || []).forEach((name, i) => {
-      const c = el('span', 'traveler-chip');
-      const nm = el('span', 'traveler-chip__name'); nm.textContent = name;
-      const x = el('button', 'traveler-chip__x', { type: 'button' }); x.textContent = '×';
-      x.onclick = () => { trip.travelers.splice(i, 1); rerender(); };
-      c.appendChild(nm); c.appendChild(x);
-      chips.appendChild(c);
-    });
-    box.appendChild(chips);
-
-    const row = el('div', 'traveler-input-row');
-    const inp = el('input', 'input', { type: 'text', placeholder: '姓名，可添加多人', autocomplete: 'off' });
-    const add = el('button', 'traveler-add', { type: 'button' });
-    add.textContent = '添加';
-    const addName = () => {
-      const v = inp.value.trim();
-      if (!v) return;
-      trip.travelers = trip.travelers || [];
-      if (trip.travelers.indexOf(v) < 0) trip.travelers.push(v);
-      inp.value = '';
-      rerender();
-    };
-    add.onclick = addName;
-    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addName(); } });
-    row.appendChild(inp);
-    row.appendChild(add);
-    box.appendChild(row);
-
-    return box;
-  }
-
   /* ---------------- 主渲染 ---------------- */
   function renderFormBody(container, trip, rerender) {
     container.innerHTML = '';
 
-    // 出行人
-    container.appendChild(renderTravelers(trip, rerender));
+    // 出行人（多个姓名用、或空格分隔）
+    const travelersBox = el('div', 'travelers-box');
+    travelersBox.appendChild(field('出行人', inputText('travelers', (trip.travelers || []).join('、'), '多个姓名用、或空格分隔')));
+    container.appendChild(travelersBox);
 
     // 出发 / 返回日期
     const head = el('div', 'form-head');
@@ -288,7 +256,12 @@
       inputBound = true;
       container.addEventListener('input', (e) => {
         if (e.target && e.target.dataset && e.target.dataset.path) {
-          setPath(tripRef.current, e.target.dataset.path, e.target.value);
+          const path = e.target.dataset.path;
+          if (path === 'travelers') {
+            tripRef.current.travelers = parseTravelers(e.target.value);
+          } else {
+            setPath(tripRef.current, path, e.target.value);
+          }
           tripRef.current.updatedAt = Date.now();
           if (onChange) onChange(tripRef.current);
         }
