@@ -22,6 +22,13 @@
   }
   function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
 
+  /** 计算 b 相对 a 的天数差（可为负，跨天用 UTC 避免夏令时误差） */
+  function diffDays(a, b) {
+    const pa = parseDate(a), pb = parseDate(b);
+    if (!pa || !pb) return 0;
+    return Math.round((Date.UTC(pb.y, pb.m - 1, pb.d) - Date.UTC(pa.y, pa.m - 1, pa.d)) / 86400000);
+  }
+
   /* ---------------- 滚轮列 ---------------- */
   function WheelColumn(el) {
     this.el = el;
@@ -215,5 +222,5 @@
     });
   }
 
-  global.Dates = { pickDate, todayStr, fmtCN, parseDate, daysInMonth, toStr };
+  global.Dates = { pickDate, todayStr, fmtCN, parseDate, daysInMonth, diffDays, toStr };
 })(window);

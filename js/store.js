@@ -18,16 +18,66 @@
     localStorage.setItem(key, JSON.stringify(value));
   }
 
-  function getTrips() {
-    const list = read(TRIPS_KEY, []);
-    return list.slice().sort((a, b) => {
-      const byDate = (b.departureDate || '').localeCompare(a.departureDate || '');
-      return byDate !== 0 ? byDate : (b.createdAt || 0) - (a.createdAt || 0);
+  const SORT_KEY = 'travel_note_sort_v1';
+  const DEFAULT_SORT = 'date-desc';
+  const DRAFT_KEY = 'travel_note_draft_v1';
+  const FILTER_KEY = 'travel_note_filter_v1';
+
+  function getSort() { return read(SORT_KEY, DEFAULT_SORT); }
+  function setSort(key) { write(SORT_KEY, key); }
+
+  function getFilter() {
+    const f = read(FILTER_KEY, []);
+    return Array.isArray(f) ? f : [];
+  }
+  function setFilter(names) { write(FILTER_KEY, names || []); }
+
+  /* ---- 草稿（表单未保存状态，防误刷新丢失） ---- */
+  function saveDraft(trip) {
+    if (!trip) return;
+    write(DRAFT_KEY, { id: trip.id, trip: trip, savedAt: Date.now() });
+  }
+  function getDraft() {
+    const d = read(DRAFT_KEY, null);
+    return (d && d.trip) ? d : null;
+  }
+  function clearDraft() {
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+  }
+
+  function normToggle(v) {
+    return { has: !!(v && v.has), note: (v && v.note) || '' };
+  }
+
+  /** 补齐旧数据缺失字段（date / 报销开关），返回原地修正后的 trip。 */
+  function normalizeTrip(t) {
+    if (!t) return t;
+    if (!Array.isArray(t.travelers)) t.travelers = [];
+    (t.points || []).forEach((p) => {
+      const s = (p.stay = p.stay || {});
+      s.invoice = normToggle(s.invoice);
+      s.waterBill = normToggle(s.waterBill);
     });
+    (t.legs || []).forEach((l) => {
+      if (l.date == null) l.date = '';
+      if (l.mode === '高铁') {
+        l.invoice = normToggle(l.invoice);
+      } else if (l.mode === '飞机') {
+        l.invoice = normToggle(l.invoice);
+        l.boardingPass = normToggle(l.boardingPass);
+        l.payScreenshot = normToggle(l.payScreenshot);
+      }
+    });
+    return t;
+  }
+
+  function getTrips() {
+    return read(TRIPS_KEY, []).map(normalizeTrip);
   }
 
   function getTrip(id) {
-    return read(TRIPS_KEY, []).find((t) => t.id === id) || null;
+    const t = read(TRIPS_KEY, []).find((x) => x.id === id);
+    return t ? normalizeTrip(t) : null;
   }
 
   function saveTrip(trip) {
@@ -97,6 +147,7 @@
 
   global.Store = {
     getTrips, getTrip, saveTrip, deleteTrip, newId,
-    getLocations, rememberLocations, exportJSON, importJSON
+    getLocations, rememberLocations, exportJSON, importJSON,
+    getSort, setSort, getFilter, setFilter, saveDraft, getDraft, clearDraft
   };
 })(window);

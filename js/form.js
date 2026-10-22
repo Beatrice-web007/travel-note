@@ -11,7 +11,7 @@
     return { has: false, hotel: '', checkIn: '', checkOut: '', amount: '' };
   }
   function emptyLeg() {
-    return { id: Store.newId('l'), mode: '', trainNo: '', flightNo: '', price: '', duration: '', note: '' };
+    return { id: Store.newId('l'), mode: '', trainNo: '', flightNo: '', price: '', duration: '', note: '', date: '' };
   }
 
   /** 新建一趟旅行（默认：今天出发今天返回，出发点 + 终点） */
@@ -23,6 +23,7 @@
       updatedAt: Date.now(),
       departureDate: today,
       returnDate: today,
+      travelers: [],
       points: [
         { id: Store.newId('p'), role: 'start', label: '出发点', address: '', stay: emptyStay() },
         { id: Store.newId('p'), role: 'end', label: '终点', address: '', stay: emptyStay() }
@@ -167,6 +168,7 @@
     if (leg.mode) {
       const wrap = el('div', 'leg-fields');
       const p = 'legs.' + idx + '.';
+      wrap.appendChild(dateButton('乘坐日期', leg.date, p + 'date'));
       if (leg.mode === '高铁') {
         wrap.appendChild(field('车次', inputText(p + 'trainNo', leg.trainNo, '如 G1234'), true));
         wrap.appendChild(field('价格', inputText(p + 'price', leg.price, '¥ 金额', 'decimal'), true));
@@ -185,9 +187,50 @@
     return seg;
   }
 
+  function renderTravelers(trip, rerender) {
+    const box = el('div', 'travelers-box');
+    const lab = el('span', 'field-label');
+    lab.textContent = '出行人';
+    box.appendChild(lab);
+
+    const chips = el('div', 'traveler-chips');
+    (trip.travelers || []).forEach((name, i) => {
+      const c = el('span', 'traveler-chip');
+      const nm = el('span', 'traveler-chip__name'); nm.textContent = name;
+      const x = el('button', 'traveler-chip__x', { type: 'button' }); x.textContent = '×';
+      x.onclick = () => { trip.travelers.splice(i, 1); rerender(); };
+      c.appendChild(nm); c.appendChild(x);
+      chips.appendChild(c);
+    });
+    box.appendChild(chips);
+
+    const row = el('div', 'traveler-input-row');
+    const inp = el('input', 'input', { type: 'text', placeholder: '姓名，可添加多人', autocomplete: 'off' });
+    const add = el('button', 'traveler-add', { type: 'button' });
+    add.textContent = '添加';
+    const addName = () => {
+      const v = inp.value.trim();
+      if (!v) return;
+      trip.travelers = trip.travelers || [];
+      if (trip.travelers.indexOf(v) < 0) trip.travelers.push(v);
+      inp.value = '';
+      rerender();
+    };
+    add.onclick = addName;
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addName(); } });
+    row.appendChild(inp);
+    row.appendChild(add);
+    box.appendChild(row);
+
+    return box;
+  }
+
   /* ---------------- 主渲染 ---------------- */
   function renderFormBody(container, trip, rerender) {
     container.innerHTML = '';
+
+    // 出行人
+    container.appendChild(renderTravelers(trip, rerender));
 
     // 出发 / 返回日期
     const head = el('div', 'form-head');
@@ -247,6 +290,7 @@
         if (e.target && e.target.dataset && e.target.dataset.path) {
           setPath(tripRef.current, e.target.dataset.path, e.target.value);
           tripRef.current.updatedAt = Date.now();
+          if (onChange) onChange(tripRef.current);
         }
       });
     }

@@ -38,6 +38,28 @@
         </div>
       </header>
 
+      <div id="draft-banner" class="draft-banner hidden">
+        <span class="draft-banner__text">有未保存的草稿</span>
+        <button id="draft-restore" class="text-btn text-btn--primary" type="button">恢复</button>
+        <button id="draft-discard" class="text-btn" type="button">丢弃</button>
+      </div>
+
+      <div class="filterbar">
+        <div id="filter-chips" class="filter-chips"></div>
+      </div>
+
+      <div class="sortbar">
+        <label class="sortbar__label" for="sort-select">排序</label>
+        <select id="sort-select" class="sort-select">
+          <option value="date-desc">出发日期 · 晚→早</option>
+          <option value="date-asc">出发日期 · 早→晚</option>
+          <option value="days-desc">天数 · 多→少</option>
+          <option value="days-asc">天数 · 少→多</option>
+          <option value="amount-desc">金额 · 大→小</option>
+          <option value="amount-asc">金额 · 小→大</option>
+        </select>
+      </div>
+
       <div id="trip-list" class="trip-list scroll"></div>
 
       <button id="btn-new" class="fab">
@@ -74,7 +96,72 @@
       </header>
       <div id="detail-body" class="scroll form-scroll"></div>
     </section>
+
+    <!-- ============ 报销视图 ============ -->
+    <section id="view-reimb" class="view hidden">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">票</span>
+          <div class="brand-text">
+            <h1>报销</h1>
+            <p>发票 · 登机牌 · 水单</p>
+          </div>
+        </div>
+      </header>
+      <div class="filterbar">
+        <div id="reimb-filter-chips" class="filter-chips"></div>
+      </div>
+      <div class="sortbar">
+        <label class="sortbar__label" for="reimb-sort-select">排序</label>
+        <select id="reimb-sort-select" class="sort-select">
+          <option value="date-desc">出发日期 · 晚→早</option>
+          <option value="date-asc">出发日期 · 早→晚</option>
+          <option value="days-desc">天数 · 多→少</option>
+          <option value="days-asc">天数 · 少→多</option>
+          <option value="amount-desc">金额 · 大→小</option>
+          <option value="amount-asc">金额 · 小→大</option>
+        </select>
+      </div>
+      <div id="reimb-body" class="scroll reimb-scroll"></div>
+    </section>
+
+    <!-- ============ 文字导出视图 ============ -->
+    <section id="view-export" class="view hidden">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">文</span>
+          <div class="brand-text">
+            <h1>导出文字</h1>
+            <p>生成行程文字记录</p>
+          </div>
+        </div>
+      </header>
+      <div class="export-toolbar">
+        <button id="export-select-all" class="text-btn" type="button">全选</button>
+        <span id="export-count" class="export-count">已选 0 段</span>
+      </div>
+      <div id="export-body" class="scroll export-scroll"></div>
+      <div class="export-bar">
+        <button id="export-do" class="btn btn--primary" type="button">导出所选 (.txt)</button>
+      </div>
+    </section>
   </div>
+
+  <!-- ============ 底部标签栏 ============ -->
+  <nav id="tabbar" class="tabbar">
+    <button id="tab-trips" class="tab is-active" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      <span>行程</span>
+    </button>
+    <button id="tab-reimb" class="tab" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12a1 1 0 0 1 1 1v18l-2.5-2-2 2-2.5-2-2 2-2.5-2-2 2V3a1 1 0 0 1 1-1z"/><path d="M8 7h8M8 11h8"/></svg>
+      <span>报销</span>
+    </button>
+    <button id="tab-export" class="tab" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4M12 2v11"/></svg>
+      <span>导出</span>
+    </button>
+  </nav>
 
   <div id="toast" class="toast hidden"></div>
 
@@ -83,6 +170,8 @@
   <script src="js/dates.js"></script>
   <script src="js/form.js"></script>
   <script src="js/views.js"></script>
+  <script src="js/reimb.js"></script>
+  <script src="js/export.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

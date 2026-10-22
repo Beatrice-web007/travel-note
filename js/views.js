@@ -3,7 +3,7 @@
   'use strict';
 
   const { el, num, money } = Util;
-  const { fmtCN } = Dates;
+  const { fmtCN, diffDays } = Dates;
 
   function computeTotal(trip) {
     let s = 0;
@@ -12,6 +12,51 @@
     });
     (trip.legs || []).forEach((l) => { s += num(l.price); });
     return s;
+  }
+
+  function tripDays(trip) {
+    if (!trip.departureDate || !trip.returnDate) return 0;
+    return (diffDays(trip.departureDate, trip.returnDate) || 0) + 1;
+  }
+
+  function sortTrips(list, key) {
+    const cmps = {
+      'date-asc':    (a, b) => (a.departureDate || '').localeCompare(b.departureDate || ''),
+      'date-desc':   (a, b) => (b.departureDate || '').localeCompare(a.departureDate || ''),
+      'days-desc':   (a, b) => tripDays(b) - tripDays(a),
+      'days-asc':    (a, b) => tripDays(a) - tripDays(b),
+      'amount-desc': (a, b) => computeTotal(b) - computeTotal(a),
+      'amount-asc':  (a, b) => computeTotal(a) - computeTotal(b)
+    };
+    const cmp = cmps[key] || cmps['date-desc'];
+    return (list || []).slice().sort((a, b) => {
+      const c = cmp(a, b);
+      return c !== 0 ? c : (b.createdAt || 0) - (a.createdAt || 0);
+    });
+  }
+
+  function daysNights(trip) {
+    const d = tripDays(trip);
+    if (d <= 0) return '';
+    const n = d - 1;
+    return n > 0 ? d + '天' + n + '晚' : d + '天';
+  }
+
+  function allTravelers(trips) {
+    const set = [];
+    (trips || []).forEach((t) => {
+      (t.travelers || []).forEach((n) => {
+        n = (n || '').trim();
+        if (n && set.indexOf(n) < 0) set.push(n);
+      });
+    });
+    return set.sort((a, b) => a.localeCompare(b, 'zh-CN'));
+  }
+
+  function filterByTravelers(trips, names) {
+    names = names || [];
+    if (!names.length) return (trips || []).slice();
+    return (trips || []).filter((t) => (t.travelers || []).some((n) => names.indexOf(n) >= 0));
   }
 
   function shortAddr(pt) {
@@ -42,7 +87,6 @@
   function tripCard(t, onOpen) {
     const pts = t.points || [];
     const total = computeTotal(t);
-    const via = pts.filter((p) => p.role === 'waypoint').length;
 
     const card = el('article', 'trip-card');
     card.setAttribute('role', 'button');
@@ -57,11 +101,19 @@
     top.appendChild(totalEl);
     card.appendChild(top);
 
-    const route = el('div', 'trip-card__route');
+    const info = el('div', 'trip-card__info');
+    const bits = [];
+    if (t.travelers && t.travelers.length) bits.push(t.travelers.join('、'));
+    const dn = daysNights(t);
+    if (dn) bits.push(dn);
+    if (bits.length) info.textContent = bits.join(' · ');
+    card.appendChild(info);
+
+    const route = el('div', 'trip-card__route trip-card__route--chain');
     route.appendChild(el('span', 'dot dot--s'));
-    route.appendChild((function () { const n = el('span', 'name'); n.textContent = shortAddr(pts[0]); return n; })());
-    route.appendChild(el('span', 'track'));
-    route.appendChild((function () { const n = el('span', 'name name--e'); n.textContent = shortAddr(pts[pts.length - 1]); return n; })());
+    const chain = el('span', 'chain-names');
+    chain.textContent = pts.map(shortAddr).filter(Boolean).join('  →  ');
+    route.appendChild(chain);
     route.appendChild(el('span', 'dot dot--e'));
     card.appendChild(route);
 
@@ -79,10 +131,7 @@
       none.textContent = '未填交通';
       modes.appendChild(none);
     }
-    const viaEl = el('span', 'trip-card__via');
-    viaEl.textContent = via ? '途经 ' + via + ' 站' : '直达';
     meta.appendChild(modes);
-    meta.appendChild(viaEl);
     card.appendChild(meta);
 
     const go = () => onOpen(t.id);
@@ -186,5 +235,5 @@
     return parts.join(' · ') || '—';
   }
 
-  global.Views = { renderList, renderDetail, computeTotal, shortAddr };
+  global.Views = { renderList, renderDetail, computeTotal, shortAddr, sortTrips, tripDays, daysNights, allTravelers, filterByTravelers };
 })(window);

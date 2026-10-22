@@ -1,5 +1,5 @@
 /* 旅途记 Service Worker —— 应用壳离线缓存 */
-const CACHE = 'travel-note-v1';
+const CACHE = 'travel-note-v2';
 const ASSETS = [
   './',
   'index.html',
@@ -10,6 +10,8 @@ const ASSETS = [
   'js/dates.js',
   'js/form.js',
   'js/views.js',
+  'js/reimb.js',
+  'js/export.js',
   'js/app.js',
   'icons/icon.svg'
 ];
@@ -30,16 +32,14 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  // 网络优先 + 缓存兜底：在线时始终取最新版，离线时回退缓存
   e.respondWith(
-    caches.match(e.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(e.request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(e.request, copy));
-          return res;
-        })
-        .catch(() => caches.match('index.html'));
-    })
+    fetch(e.request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        return res;
+      })
+      .catch(() => caches.match(e.request).then((cached) => cached || caches.match('index.html')))
   );
 });

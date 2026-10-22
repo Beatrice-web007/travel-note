@@ -11,9 +11,19 @@
   const $formBody = document.getElementById('form-body');
   const $detailBody = document.getElementById('detail-body');
   const $formTitle = document.getElementById('form-title');
+  const $reimb = document.getElementById('view-reimb');
+  const $export = document.getElementById('view-export');
+  const $reimbBody = document.getElementById('reimb-body');
+  const $exportBody = document.getElementById('export-body');
+  const $tabbar = document.getElementById('tabbar');
+  const $sort = document.getElementById('sort-select');
+  const $reimbSort = document.getElementById('reimb-sort-select');
+  const $filterChips = document.getElementById('filter-chips');
+  const $reimbFilterChips = document.getElementById('reimb-filter-chips');
 
   let formCtl = null;
   let currentDetailId = null;
+  let currentViewName = 'list';
 
   /* ---------------- Toast ---------------- */
   let toastTimer = null;
@@ -27,9 +37,19 @@
 
   /* ---------------- 视图切换 ---------------- */
   function showView(name) {
+    currentViewName = name;
     $list.classList.toggle('hidden', name !== 'list');
     $form.classList.toggle('hidden', name !== 'form');
     $detail.classList.toggle('hidden', name !== 'detail');
+    $reimb.classList.toggle('hidden', name !== 'reimb');
+    $export.classList.toggle('hidden', name !== 'export');
+
+    const topLevel = name === 'list' || name === 'reimb' || name === 'export';
+    $tabbar.classList.toggle('hidden', !topLevel);
+    const tabKey = name === 'list' ? 'trips' : name;
+    ['trips', 'reimb', 'export'].forEach((k) => {
+      document.getElementById('tab-' + k).classList.toggle('is-active', k === tabKey);
+    });
   }
 
   function refreshLocHistory() {
@@ -46,18 +66,69 @@
   function showList() {
     showView('list');
     refreshLocHistory();
-    Views.renderList($listBody, Store.getTrips(), (id) => { location.hash = '#/view/' + id; });
+    $sort.value = Store.getSort();
+    renderFilterChips($filterChips);
+    const trips = Views.sortTrips(
+      Views.filterByTravelers(Store.getTrips(), Store.getFilter()),
+      Store.getSort()
+    );
+    Views.renderList($listBody, trips, (id) => { location.hash = '#/view/' + id; });
+    updateDraftBanner();
+  }
+
+  function updateDraftBanner() {
+    const banner = document.getElementById('draft-banner');
+    if (banner) banner.classList.toggle('hidden', !Store.getDraft());
+  }
+
+  function rerenderActiveView() {
+    if (currentViewName === 'reimb') showReimb();
+    else showList();
+  }
+
+  function renderFilterChips(container) {
+    const names = Views.allTravelers(Store.getTrips());
+    const active = Store.getFilter();
+    const bar = container.parentElement;
+    if (bar) bar.classList.toggle('hidden', names.length === 0);
+    container.innerHTML = '';
+
+    const allChip = el('button', 'filter-chip' + (active.length === 0 ? ' filter-chip--on' : ''), { type: 'button' });
+    allChip.textContent = '全部';
+    allChip.onclick = () => { Store.setFilter([]); rerenderActiveView(); };
+    container.appendChild(allChip);
+
+    names.forEach((n) => {
+      const chip = el('button', 'filter-chip' + (active.indexOf(n) >= 0 ? ' filter-chip--on' : ''), { type: 'button' });
+      chip.textContent = n;
+      chip.onclick = () => {
+        const f = Store.getFilter().slice();
+        const i = f.indexOf(n);
+        if (i >= 0) f.splice(i, 1); else f.push(n);
+        Store.setFilter(f);
+        rerenderActiveView();
+      };
+      container.appendChild(chip);
+    });
   }
 
   function showForm(id) {
     showView('form');
     refreshLocHistory();
-    const trip = id
-      ? JSON.parse(JSON.stringify(Store.getTrip(id)))
-      : Form.newTrip();
+    const draft = Store.getDraft();
+    let trip;
+    if (draft && (draft.id === id || (!id && !Store.getTrip(draft.id)))) {
+      trip = JSON.parse(JSON.stringify(draft.trip));
+    } else if (id) {
+      trip = JSON.parse(JSON.stringify(Store.getTrip(id)));
+    } else {
+      trip = Form.newTrip();
+    }
     if (!trip) { location.hash = '#/'; return; }
     $formTitle.textContent = id ? '编辑旅行' : '新建旅行';
-    formCtl = Form.mountForm($formBody, trip);
+    let dirty = false;
+    formCtl = Form.mountForm($formBody, trip, () => { if (dirty) Store.saveDraft(trip); });
+    dirty = true;
   }
 
   function showDetail(id) {
@@ -66,6 +137,18 @@
     if (!trip) { location.hash = '#/'; return; }
     currentDetailId = id;
     Views.renderDetail($detailBody, trip);
+  }
+
+  function showReimb() {
+    showView('reimb');
+    $reimbSort.value = Store.getSort();
+    renderFilterChips($reimbFilterChips);
+    Reimb.render($reimbBody);
+  }
+
+  function showExport() {
+    showView('export');
+    Export.render($exportBody);
   }
 
   /* ---------------- 保存 / 删除 ---------------- */
@@ -78,6 +161,7 @@
       return;
     }
     Store.saveTrip(trip);
+    Store.clearDraft();
     Store.rememberLocations((trip.points || []).map((p) => (p.address || '').trim()).filter(Boolean));
     toast('已保存');
     location.hash = '#/';
@@ -87,13 +171,15 @@
     if (!currentDetailId) return;
     if (!confirm('确定删除这条旅行记录？此操作不可撤销。')) return;
     Store.deleteTrip(currentDetailId);
+    const d = Store.getDraft();
+    if (d && d.id === currentDetailId) Store.clearDraft();
     toast('已删除');
     location.hash = '#/';
   }
 
   /* ---------------- 导出 / 导入 ---------------- */
-  function download(filename, text) {
-    const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+  function download(filename, text, type) {
+    const blob = new Blob([text], { type: type || 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -135,6 +221,8 @@
     if (seg === 'new') showForm(null);
     else if (seg === 'edit' && id) showForm(id);
     else if (seg === 'view' && id) showDetail(id);
+    else if (seg === 'reimb') showReimb();
+    else if (seg === 'export') showExport();
     else showList();
   }
 
@@ -155,6 +243,22 @@
     e.target.value = '';
   });
 
+  document.getElementById('tab-trips').addEventListener('click', () => { location.hash = '#/'; });
+  document.getElementById('tab-reimb').addEventListener('click', () => { location.hash = '#/reimb'; });
+  document.getElementById('tab-export').addEventListener('click', () => { location.hash = '#/export'; });
+  $sort.addEventListener('change', () => { Store.setSort($sort.value); rerenderActiveView(); });
+  $reimbSort.addEventListener('change', () => { Store.setSort($reimbSort.value); rerenderActiveView(); });
+
+  document.getElementById('draft-restore').addEventListener('click', () => {
+    const d = Store.getDraft();
+    if (!d) return;
+    location.hash = Store.getTrip(d.id) ? '#/edit/' + d.id : '#/new';
+  });
+  document.getElementById('draft-discard').addEventListener('click', () => {
+    Store.clearDraft();
+    updateDraftBanner();
+  });
+
   window.addEventListener('hashchange', route);
 
   /* ---------------- Service Worker ---------------- */
@@ -163,6 +267,8 @@
       navigator.serviceWorker.register('sw.js').catch(() => {});
     });
   }
+
+  window.AppUI = { toast: toast, download: download };
 
   route();
 })();
